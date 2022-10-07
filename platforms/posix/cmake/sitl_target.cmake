@@ -142,6 +142,7 @@ set(worlds
 	ksql_airport
 	mcmillan_airfield
 	sonoma_raceway
+	valqari
 	warehouse
 	windy
 	yosemite
