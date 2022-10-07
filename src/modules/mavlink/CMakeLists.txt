@@ -31,11 +31,11 @@
 #
 ############################################################################
 
-set(MAVLINK_DIALECT "development") # standard, development, etc
+set(MAVLINK_DIALECT_MAIN "development") # standard, development, etc
 
 # force mavlink dialect to standard if flash constrained
 if(px4_constrained_flash_build)
-	set(MAVLINK_DIALECT "standard")
+	set(MAVLINK_DIALECT_MAIN "standard")
 endif()
 
 set(MAVLINK_GIT_DIR "${CMAKE_CURRENT_LIST_DIR}/mavlink")
@@ -45,28 +45,57 @@ file(RELATIVE_PATH MAVLINK_GIT_DIR_RELATIVE ${CMAKE_SOURCE_DIR} ${MAVLINK_GIT_DI
 px4_add_git_submodule(TARGET git_mavlink_v2 PATH "${MAVLINK_GIT_DIR}")
 
 add_custom_command(
-	OUTPUT ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT}/${MAVLINK_DIALECT}.h
+	OUTPUT ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN}/${MAVLINK_DIALECT_MAIN}.h
 	COMMAND
 		${PYTHON_EXECUTABLE} ${MAVLINK_GIT_DIR}/pymavlink/tools/mavgen.py
 			--lang C --wire-protocol 2.0
 			#--no-validate
 			#--strict-units
 			--output ${MAVLINK_LIBRARY_DIR}
-			${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT}.xml
+			${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT_MAIN}.xml
 	DEPENDS
 		git_mavlink_v2
 		${MAVLINK_GIT_DIR}/pymavlink/tools/mavgen.py
-		${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT}.xml
-	COMMENT "Generating Mavlink ${MAVLINK_DIALECT}: ${MAVLINK_GIT_DIR_RELATIVE}/message_definitions/v1.0/${MAVLINK_DIALECT}.xml"
+		${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT_MAIN}.xml
+	COMMENT "Generating Mavlink ${MAVLINK_DIALECT_MAIN}: ${MAVLINK_GIT_DIR_RELATIVE}/message_definitions/v1.0/${MAVLINK_DIALECT_MAIN}.xml"
 	USES_TERMINAL
 )
-add_custom_target(mavlink_c_generate DEPENDS ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT}/${MAVLINK_DIALECT}.h)
+
+add_custom_target(mavlink_c_generate DEPENDS ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN}/${MAVLINK_DIALECT_MAIN}.h)
 
 # mavlink header only library
 add_library(mavlink_c INTERFACE)
-target_sources(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT}/${MAVLINK_DIALECT}.h)
-set_source_files_properties(${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT}/${MAVLINK_DIALECT}.h PROPERTIES GENERATED true)
-target_include_directories(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR} ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT})
+target_sources(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN}/${MAVLINK_DIALECT_MAIN}.h)
+set_source_files_properties( ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN}/${MAVLINK_DIALECT_MAIN}.h PROPERTIES GENERATED true)
+target_include_directories(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR} ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN})
+
+if(CONFIG_DRIVERS_TRANSPONDER_UAVIONIX)
+
+	set(MAVLINK_DIALECT_UAVIONIX "uAvionix")
+
+	add_custom_command(
+		OUTPUT ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}/${MAVLINK_DIALECT_UAVIONIX}.h
+		COMMAND
+			${PYTHON_EXECUTABLE} ${MAVLINK_GIT_DIR}/pymavlink/tools/mavgen.py
+				--lang C --wire-protocol 2.0
+				#--no-validate
+				#--strict-units
+				--output ${MAVLINK_LIBRARY_DIR}
+				${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT_UAVIONIX}.xml
+		DEPENDS
+			git_mavlink_v2
+			${MAVLINK_GIT_DIR}/pymavlink/tools/mavgen.py
+			${MAVLINK_GIT_DIR}/message_definitions/v1.0/${MAVLINK_DIALECT_UAVIONIX}.xml
+		COMMENT "Generating Mavlink ${MAVLINK_DIALECT_UAVIONIX}: ${MAVLINK_GIT_DIR_RELATIVE}/message_definitions/v1.0/${MAVLINK_DIALECT_UAVIONIX}.xml"
+		USES_TERMINAL
+	)
+
+	add_custom_target(mavlink_c_generate_uavionix DEPENDS ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}/${MAVLINK_DIALECT_UAVIONIX}.h)
+	target_sources(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}/${MAVLINK_DIALECT_UAVIONIX}.h)
+	set_source_files_properties(${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX}/${MAVLINK_DIALECT_UAVIONIX}.h PROPERTIES GENERATED true)
+	target_include_directories(mavlink_c INTERFACE ${MAVLINK_LIBRARY_DIR} ${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_UAVIONIX})
+endif()
+
 target_compile_options(mavlink_c INTERFACE -Wno-address-of-packed-member -Wno-cast-align)
 
 
@@ -119,7 +148,7 @@ endif()
 px4_add_unit_gtest(SRC MavlinkStatustextHandlerTest.cpp
 	INCLUDES
 		${MAVLINK_LIBRARY_DIR}
-		${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT}
+		${MAVLINK_LIBRARY_DIR}/${MAVLINK_DIALECT_MAIN}
 	COMPILE_FLAGS
 		-Wno-address-of-packed-member # TODO: fix in c_library_v2
 		-Wno-cast-align # TODO: fix
